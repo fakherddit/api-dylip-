@@ -1,13 +1,8 @@
 const TelegramBot = require('node-telegram-bot-api');
 const { Pool } = require('pg');
 
-// 1. رابط قاعدة البيانات ديالك في Koyeb
 const dbUrl = "postgres://koyeb-adm:npg_bYgGQ7lZJo8d@ep-patient-hill-alza9ryd.c-3.eu-central-1.pg.koyeb.app/koyebdb";
-
-// 2. حط هنا التوكن اللي غيعطيك BotFather ފ Telegram
 const token = '8308447806:AAGpj-E-_1jOTvA7vk9Nq1zKH48sC3YCjK8';
-
-// 3. باش البوت يجاوب غير نتا (الادمين)، حط الأيدي ديالك هنا
 const ADMIN_ID = 7210704553;
 
 const pool = new Pool({
@@ -19,7 +14,6 @@ const bot = new TelegramBot(token, { polling: true });
 
 console.log("🤖 Telegram Bot is running with Inline Buttons...");
 
-// لوحة التحكم الأساسية
 const adminMenu = {
     reply_markup: {
         inline_keyboard: [
@@ -36,7 +30,6 @@ const adminMenu = {
     }
 };
 
-// ملي شي حد كيصيفط /start
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
     if (chatId !== ADMIN_ID) {
@@ -46,7 +39,6 @@ bot.onText(/\/start/, (msg) => {
     bot.sendMessage(chatId, "مرحبا بيك فلوحة التحكم الفخمة 🟢🔥\nاختار شنو بغيتي دير من الأزرار لتحت:", adminMenu);
 });
 
-// التعامل مع الأزرار
 bot.on('callback_query', async (query) => {
     const chatId = query.message.chat.id;
     if (chatId !== ADMIN_ID) return;
@@ -55,22 +47,20 @@ bot.on('callback_query', async (query) => {
 
     if (data === 'gen_key') {
         const randomString = Math.random().toString(36).substring(2, 10).toUpperCase();
-        const newKey = `FAKHER-${randomString}`;
-
+        const newKey = \FAKHER- + "" + \;
         try {
-            await pool.query('INSERT INTO user_keys (key_string) VALUES ($1)', [newKey]);
-            bot.sendMessage(chatId, `✅ تم صنع الساروت بنجاح!\n\n🔑 الساروت: \`${newKey}\`\n\nصيفطو للكليان دابا.`, { parse_mode: 'Markdown' });
+            await pool.query('INSERT INTO user_keys (key_string) VALUES ()', [newKey]);
+            bot.sendMessage(chatId, \✅ تم صنع الساروت بنجاح!\n\n🔑 الساروت: \ + "\\" + newKey + "\" + \\n\nصيفطو للكليان دابا.\, { parse_mode: 'Markdown' });
         } catch (err) {
             bot.sendMessage(chatId, "❌ وقع مشكل فالاتصال بقاعدة البيانات.");
         }
-    }
+    } 
     else if (data === 'gen_global_key') {
         const randomString = Math.random().toString(36).substring(2, 8).toUpperCase();
-        const newKey = `FAKHER-GLOBAL-${randomString}`; // مفتاح للجميع
-
+        const newKey = \FAKHER-GLOBAL- + "" + \;
         try {
-            await pool.query('INSERT INTO user_keys (key_string) VALUES ($1)', [newKey]);
-            bot.sendMessage(chatId, `🌍 تم صنع مفتاح عام (للجميع) بنجاح!\n\n🔑 الساروت: \`${newKey}\`\n\nهاد الساروت صالح للاستعمال المتعدد.`, { parse_mode: 'Markdown' });
+            await pool.query('INSERT INTO user_keys (key_string) VALUES ()', [newKey]);
+            bot.sendMessage(chatId, \🌍 تم صنع مفتاح عام (للجميع) بنجاح!\n\n🔑 الساروت: \ + "\\" + newKey + "\" + \\n\nهاد الساروت صالح للاستعمال المتعدد.\, { parse_mode: 'Markdown' });
         } catch (err) {
             bot.sendMessage(chatId, "❌ وقع مشكل فالاتصال بقاعدة البيانات.");
         }
@@ -79,23 +69,21 @@ bot.on('callback_query', async (query) => {
         try {
             const result = await pool.query('SELECT COUNT(*) FROM user_keys');
             const count = result.rows[0].count;
-            bot.sendMessage(chatId, `📊 الإحصائيات:\nعندك حاليا ${count} ساروت مسجل في قاعدة البيانات.`);
+            bot.sendMessage(chatId, \📊 الإحصائيات:\nعندك حاليا \ + count + \ ساروت مسجل في قاعدة البيانات.\);
         } catch (err) {
             bot.sendMessage(chatId, "❌ وقع مشكل فجلب الإحصائيات.");
         }
     }
     else if (data === 'ask_delete_key') {
-        bot.sendMessage(chatId, "🗑️ لحذف ساروت، صيفط الأمر بهاد الشكل:\n`/delkey FAKHER-XXXXX`", { parse_mode: 'Markdown' });
+        bot.sendMessage(chatId, "🗑️ لحذف ساروت، صيفط الأمر بهاد الشكل:\n/delkey FAKHER-XXXXX", { parse_mode: 'Markdown' });
     }
     else if (data === 'ask_disable_key') {
-        bot.sendMessage(chatId, "⏸️ لتعطيل ساروت مؤقتا (بون ما تمسحو)، غادي تحتاج تزيد خانة 'status' فالداتابيز كوييب.\nدابا تقدر تستعمل الحذف كحل بديل مباشر:", { parse_mode: 'Markdown' });
+        bot.sendMessage(chatId, "⏸️ لتعطيل ساروت مؤقتا (بون ما تمسحو)، استعمل الحذف كحل بديل مباشر:", { parse_mode: 'Markdown' });
     }
 
-    // إخفاء علامة التحميل من الزر
     bot.answerCallbackQuery(query.id);
 });
 
-// أمر حذف الساروت
 bot.onText(/\/delkey (.+)/, async (msg, match) => {
     const chatId = msg.chat.id;
     if (chatId !== ADMIN_ID) return;
@@ -103,14 +91,13 @@ bot.onText(/\/delkey (.+)/, async (msg, match) => {
     const keyToDelete = match[1];
 
     try {
-        const result = await pool.query('DELETE FROM user_keys WHERE key_string = $1 RETURNING *', [keyToDelete]);
+        const result = await pool.query('DELETE FROM user_keys WHERE key_string =  RETURNING *', [keyToDelete]);
         if (result.rowCount > 0) {
-            bot.sendMessage(chatId, `✅ تم حذف الساروت بنجاح:\n\`${keyToDelete}\``, { parse_mode: 'Markdown' });
+            bot.sendMessage(chatId, \✅ تم حذف الساروت بنجاح:\n\ + "\\" + keyToDelete + "\", { parse_mode: 'Markdown' });
         } else {
-            bot.sendMessage(chatId, `❌ مالقيتش هاد الساروت فالداتابيز:\n\`${keyToDelete}\``, { parse_mode: 'Markdown' });
+            bot.sendMessage(chatId, \❌ مالقيتش هاد الساروت فالداتابيز:\n\ + "\\" + keyToDelete + "\", { parse_mode: 'Markdown' });
         }
     } catch (err) {
         bot.sendMessage(chatId, "❌ مشكل فالحذف.");
     }
 });
-
