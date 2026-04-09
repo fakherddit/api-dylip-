@@ -16,7 +16,7 @@ const pool = new Pool({
 
 // التجربة باش نعرفو السيرفر خدام
 app.get('/', (req, res) => {
-    res.send("API is running!");
+    res.send("API is running! (Global Key Enhanced)");
 });
 
 // المسار (Endpoint) لي غيصيفط ليه ال dylib
@@ -28,21 +28,25 @@ app.post('/api/verify', async (req, res) => {
     }
 
     try {
-        // كنقلبو على الساروت ف قاعدة البيانات
         const result = await pool.query('SELECT * FROM user_keys WHERE key_string = $1', [key]);
 
-        // الساروت ماكاينش
         if (result.rows.length === 0) {
             return res.status(401).json({ error: "Invalid Key" });
         }
 
         const dbKey = result.rows[0];
 
-        // واش الساروت مسجل لشي جهاز (HWID) قبل، ولا هادي أول مرة؟
+        // ⭐ التخطي (Bypass): يلا كان الساروت فيه كلمة GLOBAL، غيخدم بلا ما يشوف واش مسجل لشي تليفون آخر! ⭐
+        if (key.includes("GLOBAL")) {
+            return res.json({
+                status: "success",
+                payload: "VIP_FEATURES_UNLOCKED_5C"
+            });
+        }
+
         if (!dbKey.hwid) {
             // أول مرة: غنسجلو ليه ال HWID ديال هاد التليفون
             await pool.query('UPDATE user_keys SET hwid = $1 WHERE key_string = $2', [hwid, key]);
-            // كنرجعو ليه ديك الداتا لي غتفتح المنيو فالـ dylib (باش نتجنبو boolean return)
             return res.json({
                 status: "success",
                 payload: "VIP_FEATURES_UNLOCKED_5C" // هاد القيمة غيكون ال dylib كيتسناها باش يتخدم
