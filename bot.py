@@ -8,8 +8,7 @@ const dbUrl = "postgres://koyeb-adm:npg_bYgGQ7lZJo8d@ep-patient-hill-alza9ryd.c-
 const token = '8308447806:AAGpj-E-_1jOTvA7vk9Nq1zKH48sC3YCjK8';
 
 // 3. باش البوت يجاوب غير نتا (الادمين)، حط الأيدي ديالك هنا
-// تقدر تجبدو من البوت @ShowJsonBot
-const ADMIN_ID = 7210704553; // بدلو بالأيدي ديالك الحقيقي
+const ADMIN_ID = 7210704553;
 
 const pool = new Pool({
     connectionString: dbUrl,
@@ -18,54 +17,82 @@ const pool = new Pool({
 
 const bot = new TelegramBot(token, { polling: true });
 
-console.log("🤖 Telegram Bot is running...");
+console.log("🤖 Telegram Bot is running with Inline Buttons...");
+
+// لوحة التحكم الأساسية
+const adminMenu = {
+    reply_markup: {
+        inline_keyboard: [
+            [{ text: "🔑 إنشاء مفتاح جديد (Gen Key)", callback_data: "gen_key" }],
+            [{ text: "🗑️ حذف مفتاح (Delete Key)", callback_data: "ask_delete_key" }],
+            [{ text: "📊 الإحصائيات (Stats)", callback_data: "show_stats" }]
+        ]
+    }
+};
 
 // ملي شي حد كيصيفط /start
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
-    bot.sendMessage(chatId, "مرحبا بيك فالبوت ديال فخر! \nإلا كنتي الأدمين صيفط /genkey باش تصاوب ساروت جديد.");
-});
-
-// أمر صناعة السوارت /genkey
-bot.onText(/\/genkey/, async (msg) => {
-    const chatId = msg.chat.id;
-
-    // تأكد واش المرسل هو الأدمين
-    // إيلا بغيتي أي واحد يصاوب السوارت حبس هاد الشرط (Commenter it)
     if (chatId !== ADMIN_ID) {
         bot.sendMessage(chatId, "❌ ماعندكش الصلاحية تصاوب السوارت!");
         return;
     }
-
-    // توليد ساروت عشوائي (مثلا: FAKHER-VIP-A1B2C3D4)
-    const randomString = Math.random().toString(36).substring(2, 10).toUpperCase();
-    const newKey = `FAKHER-VIP-${randomString}`;
-
-    try {
-        // حط الساروت في قاعدة البيانات ديال Koyeb
-        await pool.query('INSERT INTO user_keys (key_string) VALUES ($1)', [newKey]);
-
-        // جاوب الأدمين
-        bot.sendMessage(chatId, `✅ تم صنع الساروت بنجاح!\n\n🔑 الساروت: \`${newKey}\`\n\nصيفطو للكليان دابا.`, { parse_mode: 'Markdown' });
-        console.log(`[+] New Key Generated: ${newKey}`);
-
-    } catch (err) {
-        console.error(err);
-        bot.sendMessage(chatId, "❌ وقع مشكل فالاتصال بقاعدة البيانات. جرب عاود.");
-    }
+    bot.sendMessage(chatId, "مرحبا بيك فلوحة التحكم الفخمة 🟢🔥\nاختار شنو بغيتي دير من الأزرار لتحت:", adminMenu);
 });
 
-// أمر لمعرفة شحال من ساروت مبيوع /stats
-bot.onText(/\/stats/, async (msg) => {
+// التعامل مع الأزرار
+bot.on('callback_query', async (query) => {
+    const chatId = query.message.chat.id;
+    if (chatId !== ADMIN_ID) return;
+
+    const data = query.data;
+
+    if (data === 'gen_key') {
+        const randomString = Math.random().toString(36).substring(2, 10).toUpperCase();
+        const newKey = `FAKHER-${randomString}`; // درنا FAKHER- باش يخدم مع التحديث لي درنا فـ dylib
+
+        try {
+            await pool.query('INSERT INTO user_keys (key_string) VALUES ($1)', [newKey]);
+            bot.sendMessage(chatId, `✅ تم صنع الساروت بنجاح!\n\n🔑 الساروت: \`${newKey}\`\n\nصيفطو للكليان دابا.`, { parse_mode: 'Markdown' });
+            console.log(`[+] New Key Generated: ${newKey}`);
+        } catch (err) {
+            console.error(err);
+            bot.sendMessage(chatId, "❌ وقع مشكل فالاتصال بقاعدة البيانات. جرب عاود.");
+        }
+    }
+    else if (data === 'show_stats') {
+        try {
+            const result = await pool.query('SELECT COUNT(*) FROM user_keys');
+            const count = result.rows[0].count;
+            bot.sendMessage(chatId, `📊 الإحصائيات:\nعندك حاليا ${count} ساروت مسجل في قاعدة البيانات.`);
+        } catch (err) {
+            bot.sendMessage(chatId, "❌ وقع مشكل فجلب الإحصائيات.");
+        }
+    }
+    else if (data === 'ask_delete_key') {
+        bot.sendMessage(chatId, "🗑️ لحذف ساروت، صيفط الأمر بهاد الشكل:\n`/delkey FAKHER-XXXXX`", { parse_mode: 'Markdown' });
+    }
+
+    // إخفاء علامة التحميل من الزر
+    bot.answerCallbackQuery(query.id);
+});
+
+// أمر حذف الساروت
+bot.onText(/\/delkey (.+)/, async (msg, match) => {
     const chatId = msg.chat.id;
+    if (chatId !== ADMIN_ID) return;
+
+    const keyToDelete = match[1];
 
     try {
-        const result = await pool.query('SELECT COUNT(*) FROM user_keys');
-        const count = result.rows[0].count;
-
-        bot.sendMessage(chatId, `📊 الإحصائيات:\nعندك حاليا ${count} ساروت مسجل في قاعدة البيانات.`);
+        const result = await pool.query('DELETE FROM user_keys WHERE key_string = $1 RETURNING *', [keyToDelete]);
+        if (result.rowCount > 0) {
+            bot.sendMessage(chatId, `✅ تم حذف الساروت بنجاح:\n\`${keyToDelete}\``, { parse_mode: 'Markdown' });
+        } else {
+            bot.sendMessage(chatId, `❌ مالقيتش هاد الساروت فالداتابيز:\n\`${keyToDelete}\``, { parse_mode: 'Markdown' });
+        }
     } catch (err) {
-        bot.sendMessage(chatId, "❌ وقع مشكل.");
+        bot.sendMessage(chatId, "❌ مشكل فالحذف.");
     }
 });
 
