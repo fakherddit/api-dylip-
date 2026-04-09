@@ -23,8 +23,14 @@ console.log("🤖 Telegram Bot is running with Inline Buttons...");
 const adminMenu = {
     reply_markup: {
         inline_keyboard: [
-            [{ text: "🔑 إنشاء مفتاح جديد (Gen Key)", callback_data: "gen_key" }],
-            [{ text: "🗑️ حذف مفتاح (Delete Key)", callback_data: "ask_delete_key" }],
+            [
+                { text: "🔑 مفتاح عادي (Normal)", callback_data: "gen_key" },
+                { text: "🌍 مفتاح عام (Global)", callback_data: "gen_global_key" }
+            ],
+            [
+                { text: "🗑️ حذف مفتاح", callback_data: "ask_delete_key" },
+                { text: "⏸️ تعطيل/إيقاف", callback_data: "ask_disable_key" }
+            ],
             [{ text: "📊 الإحصائيات (Stats)", callback_data: "show_stats" }]
         ]
     }
@@ -49,15 +55,24 @@ bot.on('callback_query', async (query) => {
 
     if (data === 'gen_key') {
         const randomString = Math.random().toString(36).substring(2, 10).toUpperCase();
-        const newKey = `FAKHER-${randomString}`; // درنا FAKHER- باش يخدم مع التحديث لي درنا فـ dylib
+        const newKey = `FAKHER-${randomString}`;
 
         try {
             await pool.query('INSERT INTO user_keys (key_string) VALUES ($1)', [newKey]);
             bot.sendMessage(chatId, `✅ تم صنع الساروت بنجاح!\n\n🔑 الساروت: \`${newKey}\`\n\nصيفطو للكليان دابا.`, { parse_mode: 'Markdown' });
-            console.log(`[+] New Key Generated: ${newKey}`);
         } catch (err) {
-            console.error(err);
-            bot.sendMessage(chatId, "❌ وقع مشكل فالاتصال بقاعدة البيانات. جرب عاود.");
+            bot.sendMessage(chatId, "❌ وقع مشكل فالاتصال بقاعدة البيانات.");
+        }
+    }
+    else if (data === 'gen_global_key') {
+        const randomString = Math.random().toString(36).substring(2, 8).toUpperCase();
+        const newKey = `FAKHER-GLOBAL-${randomString}`; // مفتاح للجميع
+
+        try {
+            await pool.query('INSERT INTO user_keys (key_string) VALUES ($1)', [newKey]);
+            bot.sendMessage(chatId, `🌍 تم صنع مفتاح عام (للجميع) بنجاح!\n\n🔑 الساروت: \`${newKey}\`\n\nهاد الساروت صالح للاستعمال المتعدد.`, { parse_mode: 'Markdown' });
+        } catch (err) {
+            bot.sendMessage(chatId, "❌ وقع مشكل فالاتصال بقاعدة البيانات.");
         }
     }
     else if (data === 'show_stats') {
@@ -71,6 +86,9 @@ bot.on('callback_query', async (query) => {
     }
     else if (data === 'ask_delete_key') {
         bot.sendMessage(chatId, "🗑️ لحذف ساروت، صيفط الأمر بهاد الشكل:\n`/delkey FAKHER-XXXXX`", { parse_mode: 'Markdown' });
+    }
+    else if (data === 'ask_disable_key') {
+        bot.sendMessage(chatId, "⏸️ لتعطيل ساروت مؤقتا (بون ما تمسحو)، غادي تحتاج تزيد خانة 'status' فالداتابيز كوييب.\nدابا تقدر تستعمل الحذف كحل بديل مباشر:", { parse_mode: 'Markdown' });
     }
 
     // إخفاء علامة التحميل من الزر
